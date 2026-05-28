@@ -16,11 +16,10 @@ interface Project {
 
 const projects: Project[] = [
   {
-    name: "Atlas Provisions",
-    category: "E-commerce · Sistema de marca",
+    name: "Fanaticks POS",
+    category: "Producto SaaS · POS para eventos",
     year: "2025",
-    image:
-      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=1600&q=80",
+    image: "/projects/fanaticks-pos.jpg",
     span: "col-span-12 md:col-span-7",
   },
   {
