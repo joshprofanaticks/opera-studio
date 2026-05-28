@@ -54,11 +54,12 @@ export function Hero() {
       <div className="hero-bg absolute inset-0 z-0">
         <video
           src="/hero-reel.mp4"
+          poster="/hero-poster.jpg"
           autoPlay
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="auto"
           aria-hidden
           className="absolute inset-0 w-full h-full object-cover"
         />
