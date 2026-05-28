@@ -8,6 +8,35 @@ const headline = ["Software", "para marcas", "que operan", "con criterio."];
 
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Autoplay-policy safety net: try to play immediately, retry on first
+  // user interaction if Chrome's autoplay gate blocks the initial attempt.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    const tryPlay = () => {
+      v.play().catch(() => {
+        // Still blocked; will be retried by interaction handlers below.
+      });
+    };
+
+    tryPlay();
+
+    const onInteract = () => {
+      tryPlay();
+    };
+    window.addEventListener("pointerdown", onInteract, { once: true });
+    window.addEventListener("scroll", onInteract, { once: true, passive: true });
+    window.addEventListener("keydown", onInteract, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", onInteract);
+      window.removeEventListener("scroll", onInteract);
+      window.removeEventListener("keydown", onInteract);
+    };
+  }, []);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -53,6 +82,7 @@ export function Hero() {
       {/* Full-bleed video background */}
       <div className="hero-bg absolute inset-0 z-0">
         <video
+          ref={videoRef}
           src="/hero-reel.mp4"
           poster="/hero-poster.jpg"
           autoPlay
