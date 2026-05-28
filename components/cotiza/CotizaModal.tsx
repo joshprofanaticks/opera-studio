@@ -11,10 +11,11 @@ const projectTypes = [
 ];
 
 const budgets = [
-  "< $10k USD",
-  "$10k – $30k USD",
-  "$30k – $80k USD",
-  "$80k+ USD",
+  "< $500 USD",
+  "$500 – $1k USD",
+  "$1k – $2k USD",
+  "$2k – $5k USD",
+  "$5k+ USD",
   "Conversemos",
 ];
 
@@ -25,6 +26,8 @@ const timelines = [
   "6+ meses",
   "Flexible",
 ];
+
+const INSTAGRAM_URL = "https://www.instagram.com/operastud.io";
 
 export function CotizaModal() {
   const { open, setOpen } = useCotiza();
@@ -94,9 +97,7 @@ export function CotizaModal() {
         );
       }
     } catch {
-      setError(
-        "Error de red. Verifica tu conexión e intenta de nuevo.",
-      );
+      setError("Error de red. Verifica tu conexión e intenta de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +114,7 @@ export function CotizaModal() {
   return (
     <div
       aria-hidden={!open}
-      className={`fixed inset-0 z-[70] bg-ink text-paper transition-[clip-path] duration-700 ease-[cubic-bezier(0.76,0,0.24,1)] ${
+      className={`fixed inset-0 z-[70] bg-ink text-paper flex flex-col transition-[clip-path] duration-700 ease-[cubic-bezier(0.76,0,0.24,1)] ${
         open
           ? "[clip-path:circle(150%_at_50%_100%)]"
           : "[clip-path:circle(0%_at_50%_100%)] pointer-events-none"
@@ -121,7 +122,8 @@ export function CotizaModal() {
       role="dialog"
       aria-label="Cotiza tu proyecto"
     >
-      <div className="container-page flex items-center justify-between py-6">
+      {/* Header — always visible at top */}
+      <div className="container-page flex items-center justify-between py-5 md:py-6 shrink-0 border-b border-paper/10">
         <span className="label text-paper/50">[ 06 ] Cotización</span>
         <button
           onClick={handleClose}
@@ -133,9 +135,10 @@ export function CotizaModal() {
         </button>
       </div>
 
-      <div className="container-page pb-24 max-h-[calc(100svh-5rem)] overflow-y-auto">
-        {!submitted ? (
-          <>
+      {!submitted ? (
+        <>
+          {/* Scrollable form area */}
+          <div className="container-page flex-1 overflow-y-auto pt-8 md:pt-10 pb-8">
             <h2
               className="display max-w-[18ch]"
               style={{
@@ -154,10 +157,11 @@ export function CotizaModal() {
 
             <form
               ref={formRef}
+              id="cotiza-form"
               onSubmit={handleSubmit}
               className="mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl"
             >
-              {/* Honeypot — invisible para humanos, los bots lo llenan y los filtramos */}
+              {/* Honeypot — invisible for humans, bots fill it and get filtered */}
               <input
                 type="checkbox"
                 name="botcheck"
@@ -209,66 +213,78 @@ export function CotizaModal() {
                   {error}
                 </div>
               )}
-
-              <div className="md:col-span-2 flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-4 pt-2">
-                <span className="label text-paper/40 max-w-md">
-                  Te respondemos por correo en menos de 48h al email que nos
-                  dejes arriba.
-                </span>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  data-cursor="hover"
-                  className="group inline-flex items-center gap-3 rounded-full border border-paper/30 px-6 py-4 hover:bg-paper hover:text-ink transition-colors disabled:opacity-60 disabled:cursor-wait"
-                >
-                  <span className="label">
-                    {submitting ? "Enviando…" : "Enviar cotización"}
-                  </span>
-                  <span
-                    className={`text-signal transition-transform ${
-                      submitting
-                        ? "animate-pulse"
-                        : "group-hover:translate-x-1"
-                    }`}
-                  >
-                    →
-                  </span>
-                </button>
-              </div>
             </form>
-          </>
-        ) : (
-          <div className="min-h-[60vh] flex flex-col justify-center">
-            <span className="label text-paper/50">[ 06 ] Recibido</span>
-            <h2
-              className="display mt-6 max-w-[18ch]"
-              style={{
-                fontSize: "clamp(2.5rem, 7vw, 6rem)",
-                lineHeight: "0.92",
-              }}
-            >
-              Gracias
-              <span className="text-signal">.</span>
-            </h2>
-            <p className="mt-6 max-w-2xl text-paper/70 text-lg md:text-xl tracking-tight leading-snug">
-              Tu cotización llegó. Te respondemos en menos de 48h al correo
-              que nos dejaste. Mientras tanto, puedes seguirnos en Instagram.
-            </p>
-            <div className="mt-10">
+          </div>
+
+          {/* Sticky footer — submit button always visible */}
+          <div className="container-page shrink-0 border-t border-paper/10 py-4 md:py-5 bg-ink">
+            <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+              <span className="label text-paper/40 max-w-md">
+                Te respondemos por correo en menos de 48h al email que nos
+                dejes arriba.
+              </span>
               <button
-                onClick={handleClose}
-                className="group inline-flex items-center gap-3 rounded-full border border-paper/30 px-6 py-3 hover:bg-paper hover:text-ink transition-colors"
+                type="submit"
+                form="cotiza-form"
+                disabled={submitting}
                 data-cursor="hover"
+                className="group inline-flex items-center justify-center gap-3 rounded-full border border-paper/30 px-6 py-3.5 hover:bg-paper hover:text-ink transition-colors disabled:opacity-60 disabled:cursor-wait"
               >
-                <span className="label">Cerrar</span>
-                <span className="text-signal group-hover:translate-x-1 transition-transform">
-                  ↩
+                <span className="label">
+                  {submitting ? "Enviando…" : "Enviar cotización"}
+                </span>
+                <span
+                  className={`text-signal transition-transform ${
+                    submitting ? "animate-pulse" : "group-hover:translate-x-1"
+                  }`}
+                >
+                  →
                 </span>
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <div className="container-page flex-1 overflow-y-auto flex flex-col justify-center py-10">
+          <span className="label text-paper/50">[ 06 ] Recibido</span>
+          <h2
+            className="display mt-6 max-w-[18ch]"
+            style={{
+              fontSize: "clamp(2.5rem, 7vw, 6rem)",
+              lineHeight: "0.92",
+            }}
+          >
+            Gracias
+            <span className="text-signal">.</span>
+          </h2>
+          <p className="mt-6 max-w-2xl text-paper/70 text-lg md:text-xl tracking-tight leading-snug">
+            Tu cotización llegó. Te respondemos en menos de 48h al correo que
+            nos dejaste. Mientras tanto, puedes{" "}
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cursor="hover"
+              className="text-signal underline decoration-signal/40 hover:decoration-signal underline-offset-4 transition-colors"
+            >
+              seguirnos en Instagram ↗
+            </a>
+            .
+          </p>
+          <div className="mt-10">
+            <button
+              onClick={handleClose}
+              className="group inline-flex items-center gap-3 rounded-full border border-paper/30 px-6 py-3 hover:bg-paper hover:text-ink transition-colors"
+              data-cursor="hover"
+            >
+              <span className="label">Cerrar</span>
+              <span className="text-signal group-hover:translate-x-1 transition-transform">
+                ↩
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

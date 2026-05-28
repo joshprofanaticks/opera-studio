@@ -102,17 +102,10 @@ export function Hero() {
 
       {/* Content layer */}
       <div className="relative z-10 min-h-[100svh] flex flex-col justify-between pt-28 md:pt-32 pb-6">
-        <div className="container-page flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="container-page">
           <span className="hero-meta label text-paper/55">
             [ 01 ] Opera Studio — Estudio independiente · Est. 2024
           </span>
-          <div className="hero-meta flex items-center gap-3 md:gap-4 md:max-w-xs md:text-right">
-            <span className="relative flex h-1.5 w-1.5 shrink-0">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-signal opacity-75 animate-ping" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-signal" />
-            </span>
-            <span className="label text-paper/55">Reel en vivo · 014</span>
-          </div>
         </div>
 
         <div className="container-page mt-8 md:mt-0">

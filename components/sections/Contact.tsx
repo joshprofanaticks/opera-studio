@@ -102,11 +102,14 @@ export function Contact() {
               <div className="label text-paper/40">Síguenos</div>
               <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-lg md:text-xl tracking-tight">
                 <a
-                  href="#"
-                  className="hover:text-signal transition-colors"
+                  href="https://www.instagram.com/operastud.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-signal transition-colors inline-flex items-center gap-1.5"
                   data-cursor="hover"
                 >
                   Instagram
+                  <span className="text-signal text-base">↗</span>
                 </a>
               </div>
             </div>
