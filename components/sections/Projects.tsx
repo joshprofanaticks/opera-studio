@@ -47,11 +47,10 @@ const projects: Project[] = [
     span: "col-span-12 md:col-span-7",
   },
   {
-    name: "Norte Salt Co.",
-    category: "E-commerce · Lifestyle",
-    year: "2024",
-    image: null,
-    bg: "bg-cobalt",
+    name: "Insights V1",
+    category: "Producto digital · Analytics para promotores",
+    year: "2026",
+    image: "/projects/insights-v1.jpg",
     span: "col-span-12 md:col-span-7",
   },
   {
