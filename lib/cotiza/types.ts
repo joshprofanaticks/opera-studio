@@ -18,6 +18,28 @@ export interface ScopeSection {
   amount: number;
 }
 
+/**
+ * Add-on opcional. Servicios que el cliente puede activar o no, cotizados
+ * aparte del total base. Útiles para diferenciar lo esencial vs lo "si
+ * quieres", sin obligar al cliente a tomarlo o dejarlo todo junto.
+ */
+export interface AddonSection {
+  /** Identificador único del addon dentro de esta coti, ej. "citas" o "pagos" */
+  id: string;
+  /** Pillar al que pertenece — para mantener consistencia visual con el scope base */
+  pillar: Pillar;
+  /** Título visible al cliente, ej. "Coordinación de citas" */
+  title: string;
+  /** 1-2 frases describiendo qué resuelve y por qué lo ofrecemos como opción */
+  description: string;
+  /** Qué incluye específicamente este add-on */
+  items: string[];
+  /** Monto del add-on (mismo currency que el total base) */
+  amount: number;
+  /** Override del tag visible. Default: "OPCIONAL". ej. "RECOMENDADO" si quieres empujarlo */
+  tag?: string;
+}
+
 export interface CotizaData {
   /** Slug en URL, debe ser único e impredecible. ej. "2026-002-acme-cafe-7a3b9" */
   slug: string;
@@ -48,6 +70,9 @@ export interface CotizaData {
 
   /** Bloques de alcance por pillar. Pueden omitirse los que no aplican. */
   scope: ScopeSection[];
+
+  /** Add-ons opcionales que el cliente puede activar. Cotizados aparte del total base. */
+  addons?: AddonSection[];
 
   total: {
     amount: number;

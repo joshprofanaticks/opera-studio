@@ -2,6 +2,12 @@
 
 import type { CotizaData, Pillar } from "./types";
 
+const PILLAR_LABEL: Record<Pillar, string> = {
+  operate: "Operate",
+  compose: "Compose",
+  measure: "Measure",
+};
+
 const PILLAR_META: Record<
   Pillar,
   { ord: string; title: string }
@@ -199,12 +205,91 @@ export function CotizaTemplate({ data }: { data: CotizaData }) {
         </div>
       </section>
 
+      {/* Add-ons opcionales (si existen) — entre Alcance y Total */}
+      {data.addons && data.addons.length > 0 && (
+        <section className="cotiza-frame pt-16 md:pt-24">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
+            <div className="md:col-span-3">
+              <span className="label text-signal">[ + ] Add-ons</span>
+            </div>
+            <div className="md:col-span-8 md:col-start-5">
+              <p className="text-stone text-base md:text-lg tracking-tight max-w-2xl">
+                Servicios opcionales que puedes activar. Cada uno se cotiza
+                aparte de la base. Decides cuáles antes de arrancar.
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-signal/30">
+            {data.addons.map((addon, i) => (
+              <div
+                key={addon.id}
+                className="cotiza-scope-row grid grid-cols-1 md:grid-cols-12 gap-6 py-8 md:py-10 border-b border-signal/30"
+              >
+                <div className="md:col-span-3">
+                  <div className="label text-signal">
+                    + {addon.tag || "Opcional"} · {PILLAR_LABEL[addon.pillar]}
+                  </div>
+                  <h3
+                    className="display mt-3 tracking-tight"
+                    style={{ fontSize: "clamp(1.75rem, 3.8vw, 2.75rem)" }}
+                  >
+                    {addon.title}
+                    <span className="text-signal">.</span>
+                  </h3>
+                </div>
+
+                <div className="md:col-span-6 md:col-start-5">
+                  <p
+                    className="tracking-tight mb-4 text-stone"
+                    style={{
+                      fontSize: "clamp(1rem, 1.4vw, 1.25rem)",
+                      lineHeight: "1.45",
+                    }}
+                  >
+                    {addon.description}
+                  </p>
+                  <ul className="space-y-2">
+                    {addon.items.map((item, idx) => (
+                      <li
+                        key={idx}
+                        className="flex gap-3 text-base md:text-lg leading-snug"
+                      >
+                        <span className="text-stone shrink-0 font-mono text-xs pt-1.5">
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="md:col-span-2 md:col-start-11 md:text-right">
+                  <div className="label text-stone">Si lo activas</div>
+                  <div
+                    className="display mt-2 tracking-tight font-mono"
+                    style={{ fontSize: "clamp(1.25rem, 2vw, 1.75rem)" }}
+                  >
+                    <span className="text-signal">+</span>
+                    {formatAmount(addon.amount, data.total.currency)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Total + terms */}
       <section className="cotiza-frame pt-16 md:pt-20">
         <div className="bg-ink text-paper px-6 md:px-10 py-10 md:py-14">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
             <div className="md:col-span-6">
-              <div className="label text-paper/55">[ 04 ] Total</div>
+              <div className="label text-paper/55">
+                [ 04 ] {data.addons && data.addons.length > 0
+                  ? "Total base"
+                  : "Total"}
+              </div>
               <div
                 className="display mt-4 tracking-tight"
                 style={{
@@ -236,6 +321,52 @@ export function CotizaTemplate({ data }: { data: CotizaData }) {
               </div>
             </div>
           </div>
+
+          {/* Total con add-ons (si existen) */}
+          {data.addons && data.addons.length > 0 && (
+            <div className="mt-10 md:mt-12 pt-8 md:pt-10 border-t border-paper/15">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+                <div className="md:col-span-5">
+                  <div className="label text-paper/55">
+                    Si activas los add-ons
+                  </div>
+                  <ul className="mt-4 space-y-2.5">
+                    {data.addons.map((addon) => (
+                      <li
+                        key={addon.id}
+                        className="flex justify-between items-baseline gap-4 text-base md:text-lg tracking-tight"
+                      >
+                        <span className="text-paper/75 truncate">
+                          {addon.title}
+                        </span>
+                        <span className="font-mono shrink-0">
+                          <span className="text-signal">+</span>
+                          {formatAmount(addon.amount, data.total.currency)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="md:col-span-6 md:col-start-7 md:text-right">
+                  <div className="label text-paper/55">Total con todo</div>
+                  <div
+                    className="display mt-3 tracking-tight"
+                    style={{
+                      fontSize: "clamp(2rem, 5vw, 4rem)",
+                      lineHeight: "0.95",
+                    }}
+                  >
+                    {formatAmount(
+                      data.total.amount +
+                        data.addons.reduce((s, a) => s + a.amount, 0),
+                      data.total.currency,
+                    )}
+                    <span className="text-signal">.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
