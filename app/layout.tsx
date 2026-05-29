@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SmoothScroll } from "@/components/ui/SmoothScroll";
-import { CustomCursor } from "@/components/ui/CustomCursor";
-import { Navigation } from "@/components/ui/Navigation";
-import { CotizaProvider } from "@/components/cotiza/CotizaProvider";
-import { CotizaModal } from "@/components/cotiza/CotizaModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,18 +35,10 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased grain`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning
     >
-      <body className="bg-paper text-ink font-sans">
-        <CotizaProvider>
-          <SmoothScroll />
-          <CustomCursor />
-          <Navigation />
-          {children}
-          <CotizaModal />
-        </CotizaProvider>
-      </body>
+      <body className="bg-paper text-ink font-sans">{children}</body>
     </html>
   );
 }
