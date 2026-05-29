@@ -1,6 +1,7 @@
 import type { CotizaData } from "../types";
 import { exampleCotiza } from "./example-acme-cafe";
 import { infoSiteAddonsCotiza } from "./example-info-site-addons";
+import { rewirePsicologiaCotiza } from "./2026-003-rewire-psicologia-4r2vp";
 
 /**
  * Registro de cotizaciones publicadas.
@@ -23,6 +24,7 @@ import { infoSiteAddonsCotiza } from "./example-info-site-addons";
 export const cotizaciones: Record<string, CotizaData> = {
   [exampleCotiza.slug]: exampleCotiza,
   [infoSiteAddonsCotiza.slug]: infoSiteAddonsCotiza,
+  [rewirePsicologiaCotiza.slug]: rewirePsicologiaCotiza,
 };
 
 export type CotizaSlug = keyof typeof cotizaciones;
