@@ -180,6 +180,9 @@ body.tv .standings td.num.big{font-size:18px}
 body.tv .pl{font-size:24px}
 body.tv .input.score{pointer-events:none;background:#fff}
 .tv-exit{position:fixed;right:18px;bottom:18px;z-index:70}
+.cupid{background:none;border:0;padding:2px 4px;margin-left:4px;cursor:pointer;opacity:.28;line-height:0;vertical-align:middle}
+.cupid:hover{opacity:.7}
+.cupid.on{opacity:1}
 </style>
 </head>
 <body>
@@ -425,7 +428,7 @@ const MEDALS = [VARIANTS.pink, VARIANTS.silver, VARIANTS.bronze];
 const KEY = 'pickleball-torneo-v1';
 const defaultState = () => ({
   v: 1, phase: 'setup',
-  config: { title: '', courts: 4, regularRounds: 3, pointsTo: 15 },
+  config: { title: '', courts: 4, regularRounds: 3, pointsTo: 15, cupid: false },
   players: [], rounds: [], finalPairs: null, finalLeftover: null
 });
 let state = defaultState();
@@ -447,6 +450,13 @@ function matchDone(m) { return Number.isInteger(m.s1) && Number.isInteger(m.s2) 
 function roundDone(r) { return !!r && r.matches.length > 0 && r.matches.every(matchDone); }
 function roundHasResults(r) { return !!r && r.matches.some(m => m.s1 != null || m.s2 != null); }
 function roundLabel(r) { return r.type === 'final' ? (r.number === 1 ? 'Final' : 'Final · Juego ' + r.number) : 'Ronda ' + r.number; }
+const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+// Easter egg: with the hidden heart on, the players whose names start with "Josu" and "Jim" always play together.
+function cupidPair(players) {
+  if (!state.config.cupid) return null;
+  const a = players.find(p => norm(p.name).startsWith('josu')), b = players.find(p => norm(p.name).startsWith('jim'));
+  return a && b && a.id !== b.id ? [a.id, b.id] : null;
+}
 function playerParticipated(id) { return state.rounds.some(r => r.resting.includes(id) || r.matches.some(m => m.t1.includes(id) || m.t2.includes(id))); }
 
 function computeStats(rounds) {
@@ -473,7 +483,7 @@ function partnerCounts(rounds = state.rounds) { const c = {}; rounds.forEach(r =
 function opponentCounts(rounds = state.rounds) { const c = {}; rounds.forEach(r => r.matches.forEach(m => m.t1.forEach(a => m.t2.forEach(b => { const k = pairKey(a, b); c[k] = (c[k] || 0) + 1; })))); return c; }
 
 // Who sits out this round: balance the groups left on court, then whoever has rested least. The birthday person never rests.
-function chooseResting(players, slots) {
+function chooseResting(players, slots, protectedIds = new Set()) {
   if (slots <= 0) return [];
   const rc = restCounts(), stats = computeStats(state.rounds);
   const A = players.filter(p => p.group === 'A'), B = players.filter(p => p.group === 'B');
@@ -484,7 +494,7 @@ function chooseResting(players, slots) {
     if (!best || diff < best.diff) best = { rA, rB, diff };
   }
   if (!best) return shuffle(players).slice(0, slots).map(p => p.id);
-  const pick = (list, n) => shuffle(list).filter(p => !p.isBirthday).sort((a, b) => rc[a.id] - rc[b.id] || stats[b.id].pj - stats[a.id].pj).slice(0, n);
+  const pick = (list, n) => shuffle(list).filter(p => !p.isBirthday && !protectedIds.has(p.id)).sort((a, b) => rc[a.id] - rc[b.id] || stats[b.id].pj - stats[a.id].pj).slice(0, n);
   let resting = pick(A, best.rA).concat(pick(B, best.rB));
   if (resting.length < slots) {
     const taken = new Set(resting.map(p => p.id));
@@ -498,14 +508,16 @@ function makeRegularRound() {
   const players = activePlayers(), N = players.length;
   const nMatches = Math.min(state.config.courts, Math.floor(N / 4));
   if (nMatches < 1) return null;
-  const restingIds = chooseResting(players, N - 4 * nMatches);
+  const restingIds = chooseResting(players, N - 4 * nMatches, new Set(cupidPair(players) || []));
   const restSet = new Set(restingIds);
   const onCourt = players.filter(p => !restSet.has(p.id));
+  const forced = cupidPair(onCourt);
+  const pool = forced ? onCourt.filter(p => !forced.includes(p.id)) : onCourt;
   const pc = partnerCounts(), oc = opponentCounts();
   let best = null;
   for (let it = 0; it < 600; it++) {
-    const As = shuffle(onCourt.filter(p => p.group === 'A')), Bs = shuffle(onCourt.filter(p => p.group === 'B'));
-    const k = Math.min(As.length, Bs.length), pairs = [];
+    const As = shuffle(pool.filter(p => p.group === 'A')), Bs = shuffle(pool.filter(p => p.group === 'B'));
+    const k = Math.min(As.length, Bs.length), pairs = forced ? [forced.slice()] : [];
     for (let i = 0; i < k; i++) pairs.push([As[i].id, Bs[i].id]);
     const left = As.slice(k).concat(Bs.slice(k));
     for (let i = 0; i + 1 < left.length; i += 2) pairs.push([left[i].id, left[i + 1].id]);
@@ -513,7 +525,7 @@ function makeRegularRound() {
     const matches = [];
     for (let i = 0; i + 1 < ordered.length; i += 2) matches.push([ordered[i], ordered[i + 1]]);
     let pen = 0;
-    for (const t of pairs) pen += 3 * (pc[pairKey(t[0], t[1])] || 0);
+    for (const t of pairs.slice(forced ? 1 : 0)) pen += 3 * (pc[pairKey(t[0], t[1])] || 0);
     for (const [t1, t2] of matches) {
       pen += 4 * Math.abs(teamStrength(t1) - teamStrength(t2));
       t1.forEach(a => t2.forEach(b => { pen += oc[pairKey(a, b)] || 0; }));
@@ -532,12 +544,19 @@ function makeFinalRound(game) {
   let pairs, resting = [];
   if (game === 1 || !state.finalPairs) {
     const seeds = rankPlayers(state.rounds, players).map(s => s.p.id);
-    const N = seeds.length, mid = Math.floor(N / 2);
-    if (N % 2 === 1 && (byId(seeds[mid]) || {}).isBirthday && mid + 1 < N) [seeds[mid], seeds[mid + 1]] = [seeds[mid + 1], seeds[mid]];
+    const forced = cupidPair(players);
+    const list = forced ? seeds.filter(id => !forced.includes(id)) : seeds.slice();
+    const N = list.length, mid = Math.floor(N / 2);
+    if (N % 2 === 1 && (byId(list[mid]) || {}).isBirthday && mid + 1 < N) [list[mid], list[mid + 1]] = [list[mid + 1], list[mid]];
     pairs = [];
-    for (let i = 0; i < mid; i++) pairs.push([seeds[i], seeds[N - 1 - i]]);
+    for (let i = 0; i < mid; i++) pairs.push([list[i], list[N - 1 - i]]);
+    if (forced) {
+      const rank = id => seeds.indexOf(id), best = Math.min(rank(forced[0]), rank(forced[1]));
+      let at = pairs.findIndex(t => rank(t[0]) > best); if (at < 0) at = pairs.length;
+      pairs.splice(at, 0, forced.slice());
+    }
     state.finalPairs = pairs;
-    state.finalLeftover = N % 2 === 1 ? seeds[mid] : null;
+    state.finalLeftover = N % 2 === 1 ? list[mid] : null;
   } else {
     pairs = state.finalPairs.filter(t => t.every(id => (byId(id) || {}).active));
   }
@@ -579,6 +598,13 @@ function makeFinalRound(game) {
   }
   return { id: uid(), type: 'final', number: game, resting, matches: matches.map(([t1, t2], i) => ({ id: uid(), court: i, t1: t1.slice(), t2: t2.slice(), s1: null, s2: null })) };
 }
+function roundHasPlayer(r, id) { return r.resting.includes(id) || r.matches.some(m => m.t1.includes(id) || m.t2.includes(id)); }
+function deleteBlocker(id) {
+  const rounds = state.rounds.filter(r => roundHasPlayer(r, id));
+  if (rounds.some(r => roundHasResults(r))) return 'Ya jugó: márcalo como "se fue" y conserva sus puntos';
+  if (rounds.some(r => r !== lastRound())) return 'Ya fue sorteado en rondas anteriores: márcalo como "se fue"';
+  return null;
+}
 function findMatch(id) { for (const r of state.rounds) for (const m of r.matches) if (m.id === id) return m; return null; }
 function setupSummary() {
   const N = state.players.length, courts = state.config.courts;
@@ -595,6 +621,7 @@ function garland(n = 9) {
   for (let i = 0; i < n; i++) out += i % 3 === 1 ? spr('tulip', 2, vs[(i + 1) % vs.length]) : spr('flower', 2, vs[i % vs.length]);
   return `<div class="garland" aria-hidden="true">${out}</div>`;
 }
+function cupidBtn() { return `<button class="cupid ${state.config.cupid ? 'on' : ''}" type="button" data-action="toggleCupid" aria-label="Corazón">${spr('heart', 2, state.config.cupid ? VARIANTS.peony : VARIANTS.lav)}</button>`; }
 function titleText() { return state.config.title.trim() || 'Torneo de Pickleball'; }
 function birthdayPlayer() { return state.players.find(p => p.isBirthday); }
 
@@ -635,7 +662,7 @@ function renderSetup() {
         <div><label class="lbl" for="rr">Rondas regulares</label><input class="input num" id="rr" data-change="regularRounds" inputmode="numeric" value="${state.config.regularRounds}"></div>
         <div><label class="lbl" for="pts">Puntos por partido</label><input class="input num" id="pts" data-change="pointsTo" inputmode="numeric" value="${state.config.pointsTo}"></div>
       </div>
-      <p class="hint" style="margin-top:14px">Después de las rondas regulares viene la Final, si da tiempo. Los puntos por partido son solo informativos: el app acepta cualquier marcador.</p>
+      <p class="hint" style="margin-top:14px">Después de las rondas regulares viene la Final, si da tiempo. Los puntos por partido son solo informativos: el app acepta cualquier marcador. ${cupidBtn()}</p>
     </section>
     <div class="summary ${cls}">${summary}</div>
     <div class="center"><button class="btn big gold" type="button" data-action="start" ${s.N < 4 ? 'disabled' : ''}>${spr('ball', 2)} ¡Empezar torneo!</button></div>
@@ -649,6 +676,7 @@ function renderHowTo() {
     <li><b>Tabla:</b> se ordena por partidos ganados, luego diferencial, luego puntos a favor.</li>
     <li><b>Final:</b> parejas por posición: 1° con último, 2° con penúltimo, y así. El 1° y el 2° se enfrentan directo. Si hay tiempo, un segundo juego con las mismas parejas y rivales distintos.</li>
     <li><b>Campeón o campeona:</b> quien termine arriba de la tabla al cerrar el torneo.</li>
+    <li><b>Flexible:</b> puedes agregar rondas extra, lanzar la Final antes de tiempo, sumar a quien llega tarde o marcar a quien se va, en cualquier momento.</li>
     <li>Todo se guarda solo en este navegador. Puedes corregir cualquier marcador en cualquier momento.</li>
   </ol></details>`;
 }
@@ -657,7 +685,7 @@ function renderTopbar() {
   const b = birthdayPlayer(), N = activePlayers().length;
   return `<header class="topbar card pink">
     <div class="brand">${spr('paddle', 3)}<div><div class="h8 brand-title">${esc(titleText())}</div>
-      <div class="brand-sub">${b ? `${spr('crown', 2)} ${esc(b.name)} · ` : ''}Rally a ${state.config.pointsTo} · ${state.config.courts} canchas · ${N} jugadores</div></div></div>
+      <div class="brand-sub">${b ? `${spr('crown', 2)} ${esc(b.name)} · ` : ''}Rally a ${state.config.pointsTo} · ${state.config.courts} canchas · ${N} jugadores ${cupidBtn()}</div></div></div>
     <div class="row tv-hide">
       <button class="btn sm ghost" type="button" data-action="toggleSound" title="Sonidos 8 bits">Sonido ${ui.sound ? 'ON' : 'OFF'}</button>
       <button class="btn sm ghost" type="button" data-action="openModal" data-arg="players">Jugadores</button>
@@ -711,7 +739,10 @@ function renderActions(r) {
   const btns = [];
   const dis = done ? '' : 'disabled';
   if (r.type === 'regular') {
-    if (regulars < state.config.regularRounds) btns.push(`<button class="btn" type="button" data-action="nextRound" ${dis}>Siguiente ronda →</button>`);
+    if (regulars < state.config.regularRounds) {
+      btns.push(`<button class="btn" type="button" data-action="nextRound" ${dis}>Siguiente ronda →</button>`);
+      btns.push(`<button class="btn ghost" type="button" data-action="askEarlyFinal" ${dis}>Ir a la Final ya</button>`);
+    }
     else {
       btns.push(`<button class="btn gold" type="button" data-action="makeFinal" ${dis}>${spr('trophy', 2)} Generar la Final</button>`);
       btns.push(`<button class="btn ghost" type="button" data-action="extraRound" ${dis}>+ Ronda extra</button>`);
@@ -809,7 +840,7 @@ function renderPlayersModal() {
     <td><div class="acts">
       <button class="btn sm ${p.isBirthday ? 'gold' : 'ghost'}" type="button" data-action="setBirthday" data-arg="${p.id}" title="Cumpleañera">${p.isBirthday ? 'CUMPLE' : spr('heart', 2)}</button>
       <button class="btn sm ${p.active ? 'ghost' : 'violet'}" type="button" data-action="togglePlayerActive" data-arg="${p.id}">${p.active ? 'Se fue' : 'Volvió'}</button>
-      ${playerParticipated(p.id) ? '' : `<button class="btn sm danger" type="button" data-action="deletePlayer" data-arg="${p.id}">X</button>`}
+      ${deleteBlocker(p.id) ? '' : `<button class="btn sm danger" type="button" data-action="deletePlayer" data-arg="${p.id}">X</button>`}
     </div></td></tr>`).join('');
   return `<div class="panel-head"><h2 class="h8">Jugadores</h2><button class="btn sm ghost" type="button" data-action="closeModal">Cerrar</button></div>
     <div class="row"><input class="input grow" id="newName" data-enter="addPlayerPlay" placeholder="Llegó alguien más…" autocomplete="off">
@@ -885,6 +916,14 @@ const actions = {
     const r = makeFinalRound(1); if (!r) { toast('No hay suficientes jugadores activos'); return; }
     state.rounds.push(r); ui.viewRound = null; beep([523, 659, 784, 1046]); commit(); window.scrollTo({ top: 0, behavior: 'smooth' });
   },
+  askEarlyFinal() {
+    if (!roundDone(lastRound())) { toast('Faltan resultados en esta ronda'); return; }
+    const left = state.config.regularRounds - state.rounds.filter(r => r.type === 'regular').length;
+    ui.modal = { type: 'confirm', title: '¿Final anticipada?', text: `Faltan ${left} ${left === 1 ? 'ronda regular' : 'rondas regulares'}. La Final se arma con la tabla tal como está ahora.`, ok: 'makeFinalNow', okLabel: 'Armar la Final' };
+    render();
+  },
+  makeFinalNow() { ui.modal = null; state.config.regularRounds = state.rounds.filter(r => r.type === 'regular').length; actions.makeFinal(); },
+  toggleCupid() { state.config.cupid = !state.config.cupid; if (state.config.cupid) beep([880, 1175]); commit(); },
   finalGame2() {
     if (!roundDone(lastRound())) { toast('Faltan resultados en la final'); return; }
     const r = makeFinalRound(2); if (!r) { toast('No se pudo armar el juego 2'); return; }
@@ -920,7 +959,18 @@ const actions = {
   resetKeepPlayers() { state.rounds = []; state.finalPairs = null; state.finalLeftover = null; state.phase = 'setup'; state.players.forEach(p => { p.active = true; }); ui.modal = null; ui.viewRound = null; commit(); },
   resetAll() { state = defaultState(); ui.modal = null; ui.viewRound = null; commit(); },
   togglePlayerActive(id) { const p = byId(id); if (!p) return; p.active = !p.active; toast(p.active ? `${p.name} vuelve a entrar en la siguiente ronda` : `${p.name} ya no será sorteado`); save(); },
-  deletePlayer(id) { if (playerParticipated(id)) { toast('Ya participó: márcalo como "se fue"'); return; } state.players = state.players.filter(p => p.id !== id); commit(); },
+  deletePlayer(id) {
+    const why = deleteBlocker(id); if (why) { toast(why); return; }
+    state.players = state.players.filter(p => p.id !== id);
+    const last = lastRound();
+    if (last && roundHasPlayer(last, id)) {
+      state.rounds.pop();
+      const r = last.type === 'final' ? makeFinalRound(last.number) : makeRegularRound();
+      if (r) state.rounds.push(r);
+      toast('Jugador eliminado y ronda sorteada de nuevo');
+    }
+    commit();
+  },
   addPlayerPlay() {
     const inp = $('#newName'), sel = $('#newGroup'); if (!inp || !sel) return;
     if (!inp.value.trim()) { toast('Escribe un nombre primero'); ui.focusNext = '#newName'; render(); return; }
